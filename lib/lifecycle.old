@@ -1,18 +1,44 @@
-import { Effect, Value } from "./model";
+import { Effect, Value } from "./Model/model";
 
 export function effect<T>(src: Effect, deps: Value<T>[] = []): void {
     src();
     deps.forEach((d) => d(src));
     //should (probably) include some sort of cleanup
 }
-
+export function effectAll<T>(src: Effect, deps: Value<T>[] = []): void {
+    let states = [];
+    deps.forEach((d, i) => {
+        states[i] = state(0);
+        effect(
+            (old, newValue) => {
+                if (old !== newValue) {
+                    states[i](1);
+                }
+            },
+            [d]
+        );
+    });
+    effect(() => {
+        if (states.reduce((a, b) => a + b) == states.length) {
+            src();
+        }
+    }, states);
+    //should (probably) include some sort of cleanup
+}
 export function update<T>(src: Effect, deps: Value<T>[] = []): void {
     deps.forEach((d) => d(src));
 }
 
 export function state<T>(value: T): Value<T> {
     let listeners: Set<Effect> = new Set();
-    let props = {};
+    let props = {
+        next(v: T) {
+            return val(v);
+        },
+        then(cb: Effect) {
+            listeners.add(cb);
+        },
+    };
     let val = new Proxy(() => {}, {
         get(_, prop) {
             let t = value[prop] || props[prop];
@@ -23,6 +49,7 @@ export function state<T>(value: T): Value<T> {
             return t;
         },
         set(_, prop, newValue) {
+            if (["next", "then"].includes(prop as string)) return false;
             if (prop == "value" && typeof value == "function") {
                 //this probably wont work for callbacks.
                 //if I want to call the function there is currently no way.
@@ -51,8 +78,9 @@ export function state<T>(value: T): Value<T> {
         apply(_, thisArg, args) {
             if (typeof args[0] == "function") listeners.add(args[0]);
             else if (value !== args[0]) {
+                let oldValue = value;
                 value = args[0];
-                listeners.forEach((fn) => fn());
+                listeners.forEach((fn) => fn(oldValue, value));
             }
         },
         getPrototypeOf() {

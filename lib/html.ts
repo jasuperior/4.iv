@@ -1,5 +1,5 @@
 import HTML from "html-template-string";
-import { ComponentConfig } from "./model";
+import { ComponentConfig } from "./Model/model";
 export const html = (str, ...values) => {
     return HTML(str, ...values.map((v) => v?.html || v.valueOf()));
 };

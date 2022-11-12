@@ -9,12 +9,17 @@
         "build": "tsc",
         "prepare": "yarn build",
         "version": "git add -A",
-        "postversion": "git push && git push --tags"
+        "postversion": "git push && git push --tags",
+        "test": "ts-mocha tests/**/*.ts",
+        "test:only": "ts-mocha "
     },
     "dependencies": {
-        "html-template-string": "^1.2.6"
+        "html-template-string": "^1.2.6",
+        "ts-mocha": "^10.0.0"
     },
     "devDependencies": {
+        "@types/mocha": "^10.0.0",
+        "@types/node": "^18.11.9",
         "chai": "^4.3.7",
         "mocha": "^10.1.0",
         "prettier": "^2.7.1",
