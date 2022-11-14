@@ -1,9 +1,9 @@
 {
-    "name": "4.iv",
+    "name": "@oneii3/4iv",
     "version": "1.0.0",
     "description": "",
     "main": "public/index.js",
-    "author": "Ja Superior",
+    "author": "ja.superior",
     "license": "MIT",
     "scripts": {
         "build": "tsc",
@@ -14,8 +14,7 @@
         "test:only": "ts-mocha "
     },
     "dependencies": {
-        "html-template-string": "^1.2.6",
-        "ts-mocha": "^10.0.0"
+        "html-template-string": "^1.2.6"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.0",
@@ -25,6 +24,7 @@
         "prettier": "^2.7.1",
         "tslint": "^6.1.3",
         "tslint-config-prettier": "^1.18.0",
-        "typescript": "^4.8.4"
+        "typescript": "^4.8.4",
+        "ts-mocha": "^10.0.0"
     }
 }

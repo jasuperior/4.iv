@@ -1,4 +1,4 @@
-import { Callback, Effect } from "./Model/model";
+import { Callback, Effect, StateLike } from "./Model/model";
 import { State } from "./Model/State";
 
 export function state<T>(value?: Promise<T> | T) {
@@ -6,6 +6,9 @@ export function state<T>(value?: Promise<T> | T) {
 
     let p = new Proxy(s.next, {
         get(_, prop) {
+            if (prop == Symbol.toPrimitive) {
+                return s[prop].bind(s);
+            }
             if (Reflect.has(s, prop)) {
                 let val = Reflect.get(s, prop);
                 if (typeof val == "function") {
@@ -14,31 +17,33 @@ export function state<T>(value?: Promise<T> | T) {
                 return val;
             }
         },
-        apply(_, thisArg, args) {
-            let t = typeof args[0];
+        apply(_, thisArg, args): T {
+            let value = args[0];
+            let t = typeof value;
+
             switch (t) {
                 case "function":
-                    s.then(args[0]);
+                    s.then(value);
                     break;
                 default:
-                    s.next(args[0]);
+                    s.next(value);
                     break;
             }
 
-            return p;
+            return value as T;
         },
         getPrototypeOf() {
             return Object.getPrototypeOf(value);
         },
     });
 
-    return p;
+    return p as StateLike<T>;
 }
 
-export function product<T>(p: () => T, deps: State<T>[] = []) {
+export function product<T>(p: (oldValue?: T) => T, deps: StateLike<T>[] = []) {
     let value = state(p());
-    update(() => {
-        value(p());
+    update((_, lastValue) => {
+        value(p(value.valueOf() as T));
     }, deps);
 
     return value;
@@ -47,8 +52,8 @@ export function event<T>(cb: Callback<T>) {
     //a state variable that tracks when a function is called
     let args = state(null);
     let result = state(null);
-    let calls = state(0);
-    let payload = state([args, result]);
+    let calls = state<number>(0);
+    let payload = state([args.valueOf(), result.valueOf()]);
 
     let fn = ((...a) => {
         args(a);
@@ -60,18 +65,17 @@ export function event<T>(cb: Callback<T>) {
 
     update(
         () => {
-            payload([args, result]);
+            payload([args.valueOf(), result.valueOf()]);
         },
         [calls],
         true
     );
 
-    return [fn, payload];
+    return [fn, payload] as [Callback<T>, StateLike<any>];
 }
-
 export function effect<T = any>(
     e: Effect<State<T>[]>,
-    deps: State<T>[] = [],
+    deps: StateLike<T>[] = [],
     all: boolean = false
 ) {
     e(deps, []);
@@ -80,7 +84,7 @@ export function effect<T = any>(
 
 export function update<T = any>(
     e: Effect<State<T>[]>,
-    deps: State<T>[] = [],
+    deps: StateLike<T>[] = [],
     all: boolean = false
 ) {
     if (all) {
@@ -89,3 +93,5 @@ export function update<T = any>(
         State.any(deps, e);
     }
 }
+
+effect.defer = update;

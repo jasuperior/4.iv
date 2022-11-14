@@ -1,51 +1,73 @@
-import HTML from "html-template-string";
-import { ComponentConfig } from "./Model/model";
-export const html = (str, ...values) => {
-    return HTML(str, ...values.map((v) => v?.html || v.valueOf()));
-};
-export const render = (parent, ...children) => {
-    let element = parent?.html || parent;
-    children.forEach((child) => {
-        parent.appendChild(child?.html || child);
-    });
+import { effect, update } from "./api";
 
-    return element;
+const S4 = () => {
+    return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
+};
+const UUID = () => {
+    return "p" + (S4() + S4() + "-" + S4());
 };
 
-export const component = (markup, config: string | ComponentConfig) => {
-    //! EXPERIMENTAL: this api needs some work. Not sure I like it.
-    let name = typeof config == "string" ? config : config?.tag;
-    let attrs = typeof config == "object" ? config.attr || [] : [];
-    let attrMap = attrs.reduce((obj, prop, i) => {
-        obj[prop] = i;
-        return obj;
-    }, {});
-    class CustomElement extends HTMLElement {
-        private current: any;
-        #attr: any[] = [];
-        #isConnected: boolean = false;
+//create a component registry to replace elements in string with predefined ones in registry
 
-        static get observedAttributes() {
-            return attrs;
-        }
-        constructor(...args) {
-            super();
-            this.attachShadow({ mode: "open" });
-        }
-        attributeChangedCallback(attr, oldVal, newVal) {
-            if (this.#isConnected) {
-                this.current?.[attr]?.(newVal);
-            } else {
-                this.#attr[attrMap[attr]] = newVal;
+export function html(strings: TemplateStringsArray, ...values: any[]) {
+    let fragment = document.createElement("div");
+    let html = ``;
+    let attrs: any[] = [];
+    let children: any[] = [];
+    for (let idx in strings) {
+        let section = strings[idx];
+        let value = values[idx];
+        let isAttr = false;
+        section = section.replace(/\b([a-zA-Z\-]+)=$/, (_, prop) => {
+            let uuid = UUID();
+            let attr = `data-${uuid}=""`;
+            attrs.push([attr, prop, value]);
+            isAttr = true;
+            return attr;
+        });
+        html += section;
+
+        if (!isAttr && parseInt(idx) !== strings.length - 1) {
+            let uuid = UUID();
+            let child = `<span id="${uuid}"></span>`;
+            let idx = children.length;
+            children.push([uuid, value]);
+            if (value instanceof HTMLElement == false) {
+                child = `<slot id="${uuid}">${value}</slot>`;
+                children[idx][2] = true;
             }
-        }
-        connectedCallback() {
-            this.#isConnected = true;
-            this.current = markup(...this.#attr);
-            this.shadowRoot?.appendChild(this.current?.html);
+            html += child;
         }
     }
+    fragment.innerHTML = html;
 
-    customElements.define(name, CustomElement);
-    return markup;
-};
+    attrs.forEach(([placeholder, attr, value]) => {
+        let el = fragment.querySelector(`[${placeholder}]`);
+        el.removeAttribute(placeholder);
+        el.setAttribute(attr, value); //might have to coerce into px or whatever
+        if (value?.then) {
+            update(() => {
+                el.setAttribute(attr, value);
+            }, [value]);
+        }
+    });
+
+    children.forEach(([id, child, isReactive]) => {
+        let placeholder = fragment.querySelector(`#${id}`);
+        let parent = placeholder.parentNode;
+        if (isReactive) {
+            if (child?.then) {
+                update(
+                    (value) => {
+                        placeholder.innerHTML = value as unknown as string;
+                    },
+                    [child]
+                );
+            }
+        } else {
+            parent.replaceChild(child, placeholder);
+        }
+    });
+
+    return fragment.childNodes;
+}
