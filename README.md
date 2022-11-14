@@ -9,6 +9,7 @@ Its designed to be flexible and interoperable to allow for a progressive integra
 -   🔬 Tiny runtime and package size
 -   🧩 Interoperable state and effects
 -   🙌 Minimalistic, unopinionated api
+-   🔄 2 way binding
 -   🤖 Typescript Support
 -   🤷🏽‍♂️ It works!
 
@@ -47,6 +48,7 @@ Its much nicer
 A state is a value that has a functional interface for changing it over time.
 
 ```typescript
+state<T> = (value: T) => State<T>
 State<T> = T & ( T ) => T
 ```
 
@@ -142,6 +144,10 @@ assert(c == 0);
 
 > _NOTE: setting the product in this way will not affect the input variables in any way._ `assert(a == 2); assert(b == 2);`
 
+### 😅 Byproduct
+
+// TBD
+
 ### 😄 Effect
 
 Effects are simply the functions called in response to a state change. The `effect` function however is sugar for composing state variables with an effect callback and calling it immediately.
@@ -217,7 +223,7 @@ add(1, 2); //logs 1,2 -> 3
 -   RX
 -   Recoil
 
-//TBD
+// TBD
 
 ---
 

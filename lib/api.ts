@@ -1,9 +1,8 @@
-import { Callback, Effect, StateLike } from "./Model/model";
-import { State } from "./Model/State";
+import { Callback, Effect, State } from "./Model/model";
+import { Action } from "./Model/Action";
 
-export function state<T>(value?: Promise<T> | T) {
-    let s = new State(value || null);
-
+export function state<T>(value?: Promise<T> | T, setter?: Callback<T>) {
+    let s = new Action(value || null);
     let p = new Proxy(s.next, {
         get(_, prop) {
             if (prop == Symbol.toPrimitive) {
@@ -16,9 +15,18 @@ export function state<T>(value?: Promise<T> | T) {
                 }
                 return val;
             }
+            if (Reflect.has(s.props, prop)) {
+                return Reflect.get(s.props, prop);
+            }
+        },
+        set(target, prop, value) {
+            return Reflect.set(s.props, prop, value);
+        },
+        has(target, prop) {
+            return Reflect.has(s, prop) || Reflect.has(s.props, prop);
         },
         apply(_, thisArg, args): T {
-            let value = args[0];
+            let value = setter ? setter(...args) : args[0];
             let t = typeof value;
 
             switch (t) {
@@ -37,14 +45,42 @@ export function state<T>(value?: Promise<T> | T) {
         },
     });
 
-    return p as StateLike<T>;
+    return p as State<T>;
 }
 
-export function product<T>(p: (oldValue?: T) => T, deps: StateLike<T>[] = []) {
+export function product<T>(
+    p: (value?: T, lastValue?: T) => T,
+    deps: State<T>[] = []
+) {
     let value = state(p());
     update((_, lastValue) => {
         value(p(value.valueOf() as T));
     }, deps);
+
+    return value;
+}
+
+export function byproduct<T>(
+    p: (value?: T, lastValue?: T) => T,
+    q: (value?: T, lastValue?: T) => void,
+    deps: State<T>[] = []
+) {
+    let isDep = false;
+    let setIsDep = () => {
+        isDep = true;
+    };
+    update(setIsDep, deps);
+
+    let value = product(p, deps);
+    update(
+        (value, lastValue) => {
+            if (!isDep) {
+                q(value as T, lastValue as T);
+            }
+            isDep = false;
+        },
+        [value]
+    );
 
     return value;
 }
@@ -71,11 +107,11 @@ export function event<T>(cb: Callback<T>) {
         true
     );
 
-    return [fn, payload] as [Callback<T>, StateLike<any>];
+    return [fn, payload] as [Callback<T>, State<any>];
 }
 export function effect<T = any>(
-    e: Effect<State<T>[]>,
-    deps: StateLike<T>[] = [],
+    e: Effect<Action<T>[]>,
+    deps: State<T>[] = [],
     all: boolean = false
 ) {
     e(deps, []);
@@ -83,14 +119,14 @@ export function effect<T = any>(
 }
 
 export function update<T = any>(
-    e: Effect<State<T>[]>,
-    deps: StateLike<T>[] = [],
+    e: Effect<Action<T>[]>,
+    deps: State<T>[] = [],
     all: boolean = false
 ) {
     if (all) {
-        State.all(deps, e);
+        Action.all(deps, e);
     } else {
-        State.any(deps, e);
+        Action.any(deps, e);
     }
 }
 

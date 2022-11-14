@@ -1,0 +1,12 @@
+{
+    "value": 9,
+    "props": {
+        "hello": {
+            "value": 99,
+            "props": { "baby": { "value": 100, "props": {}, "isState": true } },
+            "isState": true
+        },
+        "jamel": { "a": 1 }
+    },
+    "isState": true
+}

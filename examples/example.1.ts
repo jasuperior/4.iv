@@ -1,4 +1,6 @@
 import { state, event, effect, update, product } from "../lib/api";
+import { State } from "../lib/Model/model";
+import { Action } from "../lib/Model/Action";
 
 let example = () => {
     let [ev, payload] = event((e: number) => {
@@ -47,21 +49,28 @@ let arr = (...values: any[]) => {
 };
 
 let a = state(1);
-let b = state(2);
+let b: State<number, { hello: any; jamel: any }> = state(2);
 let c = a(4);
 a == b; //?
 a(b(9)); //?
 b == +a; //?
-
+b.hello = state(99);
+b.hello.baby = state(100);
+b.jamel = {
+    a: 1,
+};
+b.toJson(); //?
 /*
 const useState = (init: any ) => {
-    let _value = state(init);
-    let [value, setValue] = React.useState(init);
+    
+    let [value, setValue] = React.useState(null);
     useEffect(()=>{
+        let _value = state(init);
+        
         _value((current)=>setValue(current))
     },[]);
 
-    return _value //not sure if this will actually change the state. 
+    return value //not sure if this will actually change the state. 
 }
 
 */
