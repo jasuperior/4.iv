@@ -3,19 +3,23 @@ import { Effect } from "./model";
 
 export class Action<T> {
     value: T;
-    listeners: Set<Effect<T>> = new Set(); //set of effects
+    effects: Set<Effect<T>> = new Set(); //set of effects
     props: Record<string, any> = {};
-    constructor(value: Promise<T> | T, listeners?: Effect<T>[]) {
-        if (listeners) this.listeners = new Set(listeners);
+    constructor(value: Promise<T> | T, effects?: Effect<T>[]) {
+        if (effects) this.effects = new Set(effects);
         this.next(value);
     }
     next(value: Promise<T> | T): this {
         let oldValue = this.value;
+        //!Note: Hacky, refactor soon
+        if (typeof value == "object") {
+            Object.assign(this.props, value);
+        }
         if (value instanceof Promise) {
             value.then(this.next.bind(this));
         } else if (value !== oldValue) {
             this.value = value;
-            this.listeners.forEach((effect) => {
+            this.effects.forEach((effect) => {
                 effect(value, oldValue);
             });
         }
@@ -27,11 +31,11 @@ export class Action<T> {
                 "NonFunctionalEffectException: the effect provided has no callable interface. Try providing a function."
             );
         }
-        this.listeners.add(effect);
+        this.effects.add(effect);
         return this;
     }
     stop(effect: Effect<T>): this {
-        this.listeners.delete(effect);
+        this.effects.delete(effect);
         return this;
     }
     valueOf() {
@@ -84,8 +88,6 @@ export class Action<T> {
             s.then(listener);
         });
     }
-    static when() {}
-    static until() {}
     toJson() {
         let json = `{"value":${this.value}, "props": {`;
         let isFirst = true;

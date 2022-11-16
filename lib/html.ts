@@ -1,4 +1,4 @@
-import { effect, update } from "./api";
+import { effect, defer } from "./api";
 
 const S4 = () => {
     return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
@@ -46,7 +46,7 @@ export function html(strings: TemplateStringsArray, ...values: any[]) {
         el.removeAttribute(placeholder);
         el.setAttribute(attr, value); //might have to coerce into px or whatever
         if (value?.then) {
-            update(() => {
+            defer(() => {
                 el.setAttribute(attr, value);
             }, [value]);
         }
@@ -57,7 +57,7 @@ export function html(strings: TemplateStringsArray, ...values: any[]) {
         let parent = placeholder.parentNode;
         if (isReactive) {
             if (child?.then) {
-                update(
+                defer(
                     (value) => {
                         placeholder.innerHTML = value as unknown as string;
                     },

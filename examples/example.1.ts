@@ -1,4 +1,4 @@
-import { state, event, effect, update, product } from "../lib/api";
+import { state, event, effect, defer, product } from "../lib/api";
 import { State } from "../lib/Model/model";
 import { Action } from "../lib/Model/Action";
 
@@ -7,7 +7,7 @@ let example = () => {
         console.log(e);
         return e + 19;
     });
-    update(
+    defer(
         (value, oldValue) => {
             console.log(value, oldValue);
         },
@@ -21,7 +21,7 @@ let sum = (_a = 0, _b = 0) => {
     let b = state(_b);
     let c = product(() => a + b, [a, b]);
 
-    update(
+    defer(
         (d, D) => {
             if (a + b != c) {
                 console.log(`${a} + ${b} != ${c}`);
@@ -48,18 +48,22 @@ let arr = (...values: any[]) => {
     return [current, set];
 };
 
-let a = state(1);
-let b: State<number, { hello: any; jamel: any }> = state(2);
-let c = a(4);
-a == b; //?
-a(b(9)); //?
-b == +a; //?
-b.hello = state(99);
-b.hello.baby = state(100);
-b.jamel = {
-    a: 1,
-};
-b.toJson(); //?
+let [isGreater, [igArgs, numberIsGreater]] = event.toggle(
+    (a: number, b: number) => a + b > 10
+);
+let [isLower, [ilArgs, numberIsLower]] = event.toggle(
+    (a: number, b: number) => a + b < 2
+);
+// console.log(payload.value);
+effect.when([numberIsGreater, numberIsLower]).then((args) => {
+    console.log("triggered: ", numberIsGreater, numberIsLower);
+});
+
+// Reflect.has({}, Symbol.iterator) //?
+isGreater(10, 2);
+isLower(1, -3);
+isLower(-100, 34);
+isLower(100, 7);
 /*
 const useState = (init: any ) => {
     

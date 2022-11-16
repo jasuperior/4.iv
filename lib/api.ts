@@ -5,6 +5,14 @@ export function state<T>(value?: Promise<T> | T, setter?: Callback<T>) {
     let s = new Action(value || null);
     let p = new Proxy(s.next, {
         get(_, prop) {
+            if (
+                prop == Symbol.iterator &&
+                Reflect.has(s.value || {}, Symbol.iterator)
+            ) {
+                return Reflect.get(s.value as any, Symbol.iterator).bind(
+                    s.value
+                );
+            }
             if (prop == Symbol.toPrimitive) {
                 return s[prop].bind(s);
             }
@@ -53,7 +61,7 @@ export function product<T>(
     deps: State<T>[] = []
 ) {
     let value = state(p());
-    update((_, lastValue) => {
+    defer((_, lastValue) => {
         value(p(value.valueOf() as T));
     }, deps);
 
@@ -69,10 +77,10 @@ export function byproduct<T>(
     let setIsDep = () => {
         isDep = true;
     };
-    update(setIsDep, deps);
+    defer(setIsDep, deps);
 
     let value = product(p, deps);
-    update(
+    defer(
         (value, lastValue) => {
             if (!isDep) {
                 q(value as T, lastValue as T);
@@ -89,7 +97,7 @@ export function event<T>(cb: Callback<T>) {
     let args = state(null);
     let result = state(null);
     let calls = state<number>(0);
-    let payload = state([args.valueOf(), result.valueOf()]);
+    let payload = state([args, result]);
 
     let fn = ((...a) => {
         args(a);
@@ -99,9 +107,9 @@ export function event<T>(cb: Callback<T>) {
         return r;
     }) as Callback<T>;
 
-    update(
+    defer(
         () => {
-            payload([args.valueOf(), result.valueOf()]);
+            payload([args, result]);
         },
         [calls],
         true
@@ -109,17 +117,31 @@ export function event<T>(cb: Callback<T>) {
 
     return [fn, payload] as [Callback<T>, State<any>];
 }
+export function toggle<T>(cb: Callback<T>) {
+    //a state variable that tracks when a function is called
+    let [fn, payload] = event(cb);
+    defer(
+        (next) => {
+            if (next) {
+                payload[1](false);
+            }
+        },
+        [payload[1]]
+    );
+    return [fn, payload] as [Callback<T>, State<any>];
+}
+
 export function effect<T = any>(
-    e: Effect<Action<T>[]>,
+    e: Effect<State<T>[]>,
     deps: State<T>[] = [],
     all: boolean = false
 ) {
     e(deps, []);
-    update(e, deps, all);
+    defer(e, deps, all);
 }
 
-export function update<T = any>(
-    e: Effect<Action<T>[]>,
+export function defer<T = any>(
+    e: Effect<State<T>[]>,
     deps: State<T>[] = [],
     all: boolean = false
 ) {
@@ -130,4 +152,24 @@ export function update<T = any>(
     }
 }
 
-effect.defer = update;
+export function filter<T extends boolean>(
+    e: Effect<State<T>[]>,
+    truthyDeps: State<T>[] = []
+) {
+    defer((next, last) => {
+        // console.log("next: ", next);
+        // if (next.reduce((a, b) => a.valueOf() && b.valueOf(), true))
+
+        if (next) e(next, last);
+    }, truthyDeps);
+}
+effect.defer = defer;
+effect.filter = filter;
+effect.when = (truthyDeps: State<boolean>[] = []) => {
+    return {
+        then(e: Effect<State<boolean>[]>) {
+            return effect.filter(e, truthyDeps);
+        },
+    };
+};
+event.toggle = toggle;

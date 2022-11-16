@@ -35,24 +35,51 @@ Its designed to be flexible and interoperable to allow for a progressive integra
 
 ### Concepts
 
-On the surface, **4iv** is just another reactive programming library. The current solutions to dealing with reactive data is to use strict observables, or event bus pub/subs.
+On the surface, **4iv** is just another reactive programming library. Where it differs is that the abstractions over state in other libraries is too opinionated, and makes coordinating and composing state more difficult that it should be.
 
-<!-- But other libraries are too opinionated in their approach to dynamic data over time. Observables are great, but forces the programmer into this paradigm of utilizing the strict pub/sub interface to grab and manipulate values. -->
+Under the hood, **4iv** uses a class called `Action` which implements a modified Observer pattern.
 
-Its much nicer
+```typescript
+interface Action<T> {
+    value: T;
+    constructor(initialValue: T, effects: ((next: T, prev: T) => void)[]);
+    next(value: T): this;
+    then(effect: (next: T, prev: T) => void): this;
+    stop(effect: (next: T, prev: T) => void): this;
+}
+```
+
+Every call to the `then` method adds a new _effect_ to the `Action`. When the `next` method is subsequently called with a new value, the `Action`'s _effects_ are signaled that a change has occurred, supplying the effects with the current and previous value of the action.
+
+Example:
+
+```typescript
+let action: Action<number> = new Action(5);
+let effect = (next, prev) => {
+    console.log(prev, next);
+};
+action.then(effect);
+action.next(6); //logs: 5, 6
+action.stop(effect);
+action.next(7); // noop
+```
+
+It's not very different from an Observable. In fact, it essentially is an observable. What **4iv** does different is abstract over this interface in order to provide easier, more coherent compositions of these observables. These abstractions allow **4iv** to remain small, without losing the ablity to construct complex compositions of the `Action`s.
 
 ### Primitives
 
 ### 😀 State
 
-A state is a value that has a functional interface for changing it over time.
+State is a value that has a functional interface for changing it over time.
+
+`State` is a functional interface over an `Action`, which also simultaneously maintains the interface of the underlying value.
 
 ```typescript
-state<T> = (value: T) => State<T>
-State<T> = T & ( T ) => T
+type state<T> = (value: T) => State<T>;
+type State<T> = T & ((T) => T) & Action<T>;
 ```
 
-you create one using the state function.
+You create one using the state function.
 
 ```typescript
 import { state } from "@oneii3/4iv";
@@ -60,7 +87,7 @@ import { state } from "@oneii3/4iv";
 let a: State<number> = state(1);
 ```
 
-A state variable works shares the same interface as the value that constructed it. This means, a state of a `number`, will still work just like any other `number` in you code. It just additionally acts as a setter when it is called like a function.
+Since a state variable shares the same interface as the value that constructed it. This means, the state of a `number`, will still work just like any other `number` in your code. It just additionally acts as a setter for the `next` or `then` method of the underlying Action when it is called like as function, with either a new value or an effect respectively.
 
 ```typescript
 import { state } from "@oneii3/4iv";
@@ -76,7 +103,7 @@ assert(a == 2);
 assert(a(3) == 3);
 ```
 
-when a state variable is called with a promise, it will internally await the value returned from the promise.
+When a state variable is called with a promise, it will internally await the value returned from the promise.
 
 ```typescript
 a(
@@ -114,12 +141,12 @@ assert(a != b);
 ### 😃 Product
 
 ```typescript
-product<T, U> = (
-    value: (last: T) => T ,
+type product<T, U> = (
+    value: (last: T) => T,
     dependencies: State<U>[]
-    ) => Product<T>
+) => Product<T>;
 
-Product<T> = State<T>
+type Product<T> = State<T>;
 ```
 
 A product is a state variable that is derived from two or more other state variables. When any of the input variables change, it recomputes its value. The changes are tracked by the values supplied to the depencency array and not the values used in the value function.
@@ -146,7 +173,35 @@ assert(c == 0);
 
 ### 😅 Byproduct
 
-// TBD
+```typescript
+type byproduct<T> = (
+    product: (value?: T, lastValue?: T) => T,
+    quotient: (value?: T, lastValue?: T) => void,
+    deps: State<T>[] = []
+) => Byproduct<T>;
+type Byproduct<T> = State<T>;
+```
+
+A `Byproduct` is a bidirectional `Product`. What this means is that changing either its dependencies or the result of a byproduct, will cause either the `product` effect or `quotient` effect respectively in response to the change.
+
+This is especially useful when data needs to be derived back to the input dependencies.
+
+```typescript
+let x = state(1);
+let y = state(2);
+let z = byproduct(
+    (next, last) => x + y,
+    (next, last) => x(z - y),
+    [x, y]
+);
+assert(z == 3);
+assert(x == 1);
+z(5);
+assert(z == 5);
+assert(x == 3);
+```
+
+In the above example, the byproduct is able to maintain the constraints of all of its values, no matter which state gets changed. This becomes extremely valuable when components can be editted from two different sources, which dictate either the pieces or the derived value of a stateful value.
 
 ### 😄 Effect
 
