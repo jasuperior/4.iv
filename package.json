@@ -1,6 +1,6 @@
 {
     "name": "@oneii3/4iv",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "",
     "main": "public/index.js",
     "module": "public/index.js",
