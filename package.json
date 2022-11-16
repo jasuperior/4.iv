@@ -1,8 +1,9 @@
 {
     "name": "@oneii3/4iv",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "",
     "main": "public/index.js",
+    "module": "public/index.js",
     "author": "ja.superior",
     "license": "MIT",
     "scripts": {
