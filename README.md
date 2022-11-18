@@ -13,6 +13,10 @@ Its designed to be flexible and interoperable to allow for a progressive integra
 -   🤖 Typescript Support
 -   🤷🏽‍♂️ It works!
 
+## Demos
+
+//TBD
+
 ## Installation
 
 ##### yarn
@@ -27,11 +31,11 @@ Its designed to be flexible and interoperable to allow for a progressive integra
 
 -   [Concepts](#Concepts)
 -   [Primitives](#Primitives)
-    -   [State](#State)
-    -   [Product](#Product)
-    -   [Effect](#Effect)
-    -   [Event](#Event)
--   [Comparisons](#Comparisons)
+    -   [State](#-state)
+    -   [Product](#-product)
+    -   [Effect](#-effect)
+    -   [Event](#-event)
+-   [Comparisons](#comparisons)
 
 ### Concepts
 
@@ -274,10 +278,6 @@ add(1, 2); //logs 1,2 -> 3
 
 ### Comparisons
 
--   Vanilla JS
--   RX
--   Recoil
-
 // TBD
 
 ---
@@ -285,5 +285,3 @@ add(1, 2); //logs 1,2 -> 3
 ## Guides
 
 ## Recipes
-
-## Demos

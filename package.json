@@ -1,11 +1,12 @@
 {
     "name": "@oneii3/4iv",
     "version": "0.0.4",
-    "description": "",
+    "description": "A novel, composable, unopinionated FRP library.",
     "main": "public/index.js",
     "module": "public/index.js",
     "author": "ja.superior",
     "license": "MIT",
+    "homepage": "https://github.com/jasuperior/4.iv",
     "scripts": {
         "build": "tsc",
         "prepare": "yarn build",

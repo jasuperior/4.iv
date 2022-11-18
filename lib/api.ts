@@ -136,8 +136,14 @@ export function effect<T = any>(
     deps: State<T>[] = [],
     all: boolean = false
 ) {
-    e(deps, []);
+    let cleanup = e(deps, []);
     defer(e, deps, all);
+    return () => {
+        deps.forEach((dep) => {
+            dep.stop(e as Effect<T>);
+        });
+        cleanup?.();
+    };
 }
 
 export function defer<T = any>(
@@ -157,12 +163,28 @@ export function filter<T extends boolean>(
     truthyDeps: State<T>[] = []
 ) {
     defer((next, last) => {
-        // console.log("next: ", next);
-        // if (next.reduce((a, b) => a.valueOf() && b.valueOf(), true))
-
         if (next) e(next, last);
     }, truthyDeps);
 }
+
+export function fromEventListener(source: any, event: string) {
+    let s = state(null);
+    let listener = source.addEventListener || source.on;
+    listener = listener.bind(source);
+
+    listener(event, (value) => {
+        s(value);
+    });
+
+    return s;
+}
+
+state.of = (source: any | string, event: string) => {
+    if (typeof source == "string") {
+        return fromEventListener(window, event);
+    }
+    return fromEventListener(source, event);
+};
 effect.defer = defer;
 effect.filter = filter;
 effect.when = (truthyDeps: State<boolean>[] = []) => {

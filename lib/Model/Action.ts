@@ -38,6 +38,23 @@ export class Action<T> {
         this.effects.delete(effect);
         return this;
     }
+    toJson() {
+        let json = `{"value":${this.value}, "props": {`;
+        let isFirst = true;
+        for (let [prop, value] of Object.entries(this.props)) {
+            // console.log(value.toJson());
+            let comma = isFirst ? "" : ",";
+            if (typeof value !== "function") {
+                isFirst = false;
+                json += `${comma}"${prop}":${JSON.stringify(value)}`;
+            } else if (value.toJson) {
+                isFirst = false;
+                json += `${comma}"${prop}":${value.toJson()}`;
+            }
+        }
+        json += `},"isState": true}`;
+        return json;
+    }
     valueOf() {
         return this.value;
     }
@@ -87,23 +104,6 @@ export class Action<T> {
         state.forEach((s) => {
             s.then(listener);
         });
-    }
-    toJson() {
-        let json = `{"value":${this.value}, "props": {`;
-        let isFirst = true;
-        for (let [prop, value] of Object.entries(this.props)) {
-            // console.log(value.toJson());
-            let comma = isFirst ? "" : ",";
-            if (typeof value !== "function") {
-                isFirst = false;
-                json += `${comma}"${prop}":${JSON.stringify(value)}`;
-            } else if (value.toJson) {
-                isFirst = false;
-                json += `${comma}"${prop}":${value.toJson()}`;
-            }
-        }
-        json += `},"isState": true}`;
-        return json;
     }
     static fromJson(json) {
         let obj: Record<string, any> = JSON.parse(json);
