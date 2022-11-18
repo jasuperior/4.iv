@@ -282,6 +282,44 @@ add(1, 2); //logs 1,2 -> 3
 
 ---
 
+## API
+
+### Action
+
+### Instance
+
+#### `Action.prototype.next<T>(value: T): this`
+
+#### `Action.prototype.then<T>(effect: Effect<T>): this`
+
+#### `Action.prototype.stop<T>(effect: Effect<T>): this`
+
+#### `Action.prototype.toJson(): string`
+
+### Static
+
+#### `Action.all<T>(state: State<T> | Action<T>, effect: Effect<T>): void`
+
+#### `Action.any<T>(state: State<T> | Action<T>, effect: Effect<T>): void`
+
+#### `Action.once<T>(state: State<T> | Action<T>, effect: Effect<T>): void`
+
+#### `Action.onceAll<T>(state: State<T> | Action<T>, effect: Effect<T>): void`
+
+#### `Action.fromJson(json: string): State<T>`
+
+#### `Action.fromObject(obj: Record<string, any>): State<T>`
+
+### State
+
+### Instance
+
+(Inherits from [`Action.prototype`](#Action))
+
+#### ``
+
+### Static
+
 ## Guides
 
 ## Recipes
