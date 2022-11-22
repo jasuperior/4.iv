@@ -6,9 +6,10 @@ Its designed to be flexible and interoperable to allow for a progressive integra
 
 ### Features
 
--   🔬 Tiny runtime and package size
--   🧩 Interoperable state and effects
--   🙌 Minimalistic, unopinionated api
+-   🔬 Tiny (35k unzipped)
+-   ⛓ Interoperable
+-   🧩 Composable
+-   🙌 Minimalistic and unopinionated
 -   🔄 2 way binding
 -   🤖 Typescript Support
 -   🤷🏽‍♂️ It works!
@@ -248,6 +249,12 @@ b("world");
 //logs: `values: "hello world"
 ```
 
+#### Effect Nesting
+
+Unlike react, There is no restriction to where you may place your state and effects. This means that you may define an effect within the body of an effect.
+
+Be careful not to
+
 ### 😁 Event
 
 ```typescript
@@ -314,7 +321,7 @@ add(1, 2); //logs 1,2 -> 3
 
 ### Instance
 
-(Inherits from [`Action.prototype`](#Action))
+(Inherits from [`Action.prototype`](#instance))
 
 #### ``
 

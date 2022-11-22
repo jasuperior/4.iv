@@ -2,7 +2,7 @@ import { Callback, Effect, State } from "./Model/model";
 import { Action } from "./Model/Action";
 
 export function state<T>(value?: Promise<T> | T, setter?: Callback<T>) {
-    let s = new Action(value || null);
+    let s = new Action(value);
     let p = new Proxy(s.next, {
         get(_, prop) {
             if (
@@ -20,6 +20,16 @@ export function state<T>(value?: Promise<T> | T, setter?: Callback<T>) {
                 let val = Reflect.get(s, prop);
                 if (typeof val == "function") {
                     return val.bind(s);
+                }
+                return val;
+            }
+            if (
+                Array.isArray(s.value) &&
+                Reflect.has(s.value as object, prop)
+            ) {
+                let val = Reflect.get(s.value, prop);
+                if (typeof val == "function") {
+                    return val.bind(s.value);
                 }
                 return val;
             }
@@ -179,9 +189,63 @@ export function fromEventListener(source: any, event: string) {
     return s;
 }
 
-state.of = (source: any | string, event: string) => {
+export function time(duration: number = Infinity) {
+    let progress = state(0);
+    let isActive = state(false);
+    let isReversed = state(false);
+    let [start] = event(() => isActive(true));
+    let [stop] = event(() => isActive(false));
+    let [reverse] = event(() => {
+        stop();
+        isReversed(true);
+    });
+    let [forward] = event(() => {
+        stop();
+        isReversed(false);
+    });
+    effect.defer(() => {
+        if (isActive == true) {
+            let action;
+            let startTime;
+            let offset = progress.value || 0;
+            requestAnimationFrame(
+                (action = (timestamp) => {
+                    startTime = startTime || timestamp;
+                    let elapsed = timestamp - startTime;
+                    let end = offset || duration;
+                    if (isReversed.value) {
+                        elapsed = end - elapsed;
+                        progress(Math.max(elapsed, 0));
+                        if (isActive == true && elapsed >= 0) {
+                            return requestAnimationFrame(action);
+                        }
+                    } else {
+                        elapsed += offset;
+                        progress(Math.min(elapsed, duration));
+                        if (isActive == true && elapsed <= duration) {
+                            return requestAnimationFrame(action);
+                        }
+                    }
+                    stop();
+                })
+            );
+        }
+    }, [isActive]);
+
+    return {
+        start,
+        stop,
+        reverse,
+        forward,
+        progress,
+        duration,
+        isActive,
+    };
+}
+
+state.of = (source: any | string, event?: string) => {
     if (typeof source == "string") {
-        return fromEventListener(window, event);
+        return fromEventListener(document, source);
     }
     return fromEventListener(source, event);
 };

@@ -1,4 +1,4 @@
-import { state, event, effect, defer, product } from "../lib/api";
+import { state, event, effect, defer, product, time } from "../lib/api";
 import { State } from "../lib/Model/model";
 import { Action } from "../lib/Model/Action";
 
@@ -48,49 +48,41 @@ let arr = (...values: any[]) => {
     return [current, set];
 };
 
-let [isGreater, [igArgs, numberIsGreater]] = event.toggle(
-    (a: number, b: number) => a + b > 10
-);
-let [isLower, [ilArgs, numberIsLower]] = event.toggle(
-    (a: number, b: number) => a + b < 2
-);
-// console.log(payload.value);
-effect.when([numberIsGreater, numberIsLower]).then((args) => {
-    console.log("triggered: ", numberIsGreater, numberIsLower);
-});
+// let [isGreater, [igArgs, numberIsGreater]] = event.toggle(
+//     (a: number, b: number) => a + b > 10
+// );
+// let [isLower, [ilArgs, numberIsLower]] = event.toggle(
+//     (a: number, b: number) => a + b < 2
+// );
+// // console.log(payload.value);
+// effect.when([numberIsGreater, numberIsLower]).then((args) => {
+//     console.log("triggered: ", numberIsGreater, numberIsLower);
+// });
 
-// Reflect.has({}, Symbol.iterator) //?
-isGreater(10, 2);
-isLower(1, -3);
-isLower(-100, 34);
-isLower(100, 7);
-/*
-const useState = (init: any ) => {
-    
-    let [value, setValue] = React.useState(null);
-    useEffect(()=>{
-        let _value = state(init);
-        
-        _value((current)=>setValue(current))
-    },[]);
+// // Reflect.has({}, Symbol.iterator) //?
+// isGreater(10, 2);
+// isLower(1, -3);
+// isLower(-100, 34);
+// isLower(100, 7);
 
-    return value //not sure if this will actually change the state. 
-}
+// let a = state([{ a: 3 }, 6]);
+// a.forEach(console.log);
+// a.c = state("", (a = "ja", b = "mel") => a + b);
+// a.c(undefined, "huburt"); //?
+// a.a = 43;
+// a[0]; //?
+// a.toJson(); //?
 
-*/
-/*
-let width = state(0), height = state(0)
-window.addEventListener("resize", (e) => {
-    width(window.clientWidth)
-    height(window.clientHeight)
-})
-
-*/
-
-// let e = sum(7, 12);
-
-// e.c + ""; //?
-// e.b(4);
-// e.a(9);
-// e.c(10);
-// +e.b; //?
+let t = time(8000);
+let seconds = state(0);
+let centiSeconds = state(0);
+console.log(centiSeconds.value);
+// t.progress(console.log);
+t.progress((v: number) => seconds(Math.floor(v / 1000)));
+t.progress((v) => centiSeconds(Math.floor((v || 1) / 100)));
+seconds(console.log);
+seconds(() => seconds > 6 && t.stop());
+t.progress(5990);
+// // t.reverse();
+t.start();
+// setTimeout(()=> t.isActive(false), 1000)

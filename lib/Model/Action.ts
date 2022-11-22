@@ -1,27 +1,36 @@
 import { state } from "../api";
-import { Effect } from "./model";
+import { Callback, Effect, State } from "./model";
 
 export class Action<T> {
     value: T;
-    effects: Set<Effect<T>> = new Set(); //set of effects
+    lastValue?: T;
     props: Record<string, any> = {};
-    constructor(value: Promise<T> | T, effects?: Effect<T>[]) {
+    readonly effects: Set<Effect<T>> = new Set(); //set of effects
+    errorHandler: Callback;
+    constructor(value: Promise<T> | T = null, effects?: Effect<T>[]) {
         if (effects) this.effects = new Set(effects);
         this.next(value);
     }
+    tick() {
+        this.effects.forEach((effect) => {
+            try {
+                effect(this.value, this.lastValue as T, this.props);
+            } catch (e) {
+                this.errorHandler?.(e, this.value, this.lastValue, this.props);
+            }
+        });
+    }
     next(value: Promise<T> | T): this {
-        let oldValue = this.value;
+        let lastValue = this.value;
         //!Note: Hacky, refactor soon
-        if (typeof value == "object") {
+        if (!Array.isArray(value) && typeof value == "object") {
             Object.assign(this.props, value);
-        }
-        if (value instanceof Promise) {
-            value.then(this.next.bind(this));
-        } else if (value !== oldValue) {
+        } else if (value instanceof Promise) {
+            value.then(this.next.bind(this)).catch(this.errorHandler);
+        } else if (value !== lastValue) {
             this.value = value;
-            this.effects.forEach((effect) => {
-                effect(value, oldValue);
-            });
+            this.lastValue = lastValue;
+            this.tick();
         }
         return this;
     }
@@ -34,12 +43,21 @@ export class Action<T> {
         this.effects.add(effect);
         return this;
     }
-    stop(effect: Effect<T>): this {
-        this.effects.delete(effect);
+    catch(effect: Callback): this {
+        this.errorHandler = effect;
+        return this;
+    }
+    stop(effect?: Effect<T>): this {
+        if (effect) {
+            this.effects.delete(effect);
+        } else {
+            this.effects.clear();
+        }
+
         return this;
     }
     toJson() {
-        let json = `{"value":${this.value}, "props": {`;
+        let json = `{"value":${JSON.stringify(this.value)}, "props": {`;
         let isFirst = true;
         for (let [prop, value] of Object.entries(this.props)) {
             // console.log(value.toJson());
@@ -105,11 +123,11 @@ export class Action<T> {
             s.then(listener);
         });
     }
-    static fromJson(json) {
+    static fromJson(json): State<any> {
         let obj: Record<string, any> = JSON.parse(json);
         return Action.fromObject(obj);
     }
-    static fromObject(obj: any) {
+    static fromObject(obj: any): State<any> {
         let state = obj.isState ? Action.state(obj.value) : obj;
         let props = obj.isState ? obj.props : obj;
         if (props) {
@@ -135,7 +153,7 @@ export class Action<T> {
                 //!TODO
             });
     }
-    static state(value) {
+    static state(value): State<any> {
         return state(value);
     }
 }
