@@ -16,7 +16,8 @@
         "test:only": "ts-mocha "
     },
     "dependencies": {
-        "html-template-string": "^1.2.6"
+        "html-template-string": "^1.2.6",
+        "rollup-plugin-terser": "^7.0.2"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.0",
