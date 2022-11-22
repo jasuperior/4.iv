@@ -49,8 +49,10 @@ interface Action<T> {
     value: T;
     constructor(initialValue: T, effects: ((next: T, prev: T) => void)[]);
     next(value: T): this;
+    tick(): this;
     then(effect: (next: T, prev: T) => void): this;
     stop(effect: (next: T, prev: T) => void): this;
+    catch(effect: (error: Error | any, next: T, prev: T) => any): this;
 }
 ```
 
@@ -63,13 +65,25 @@ let action: Action<number> = new Action(5);
 let effect = (next, prev) => {
     console.log(prev, next);
 };
-action.then(effect);
+action.then(effect).catch((e) => console.log("Error: " + e.message));
 action.next(6); //logs: 5, 6
 action.stop(effect);
 action.next(7); // noop
+action.next(new Promise((res, rej) => rej(new Error("Some Error")))); //logs: "Error: Some Error"
 ```
 
-It's not very different from an Observable. In fact, it essentially is an observable. What **4iv** does different is abstract over this interface in order to provide easier, more coherent compositions of these observables. These abstractions allow **4iv** to remain small, without losing the ablity to construct complex compositions of the `Action`s.
+It's not very different from an Observable. In fact, it essentially is an observable with a slightly modified interface. What **4iv** does different is abstract over this interface in order to provide easier, more coherent compositions of these observables. These abstractions allow **4iv** to remain small, without losing the ablity to construct complex compositions of the `Action`s.
+
+All methods of the Action return the Action instance, which provides an action with a chainable api.
+
+```typescript
+action
+    .then((value) => someMEthod(value + 1))
+    .next(9)
+    .next(10);
+```
+
+> NOTE: Actions may only contain a single error handler (supplied via `.catch()` method). Subsequent calls to `catch` will override the previous handler. The error handler is called whenever a promise is rejected or if an effect throws an error.
 
 ### Primitives
 
@@ -80,7 +94,7 @@ State is a value that has a functional interface for changing it over time.
 `State` is a functional interface over an `Action`, which also simultaneously maintains the interface of the underlying value.
 
 ```typescript
-type state<T> = (value: T) => State<T>;
+type state<T> = (value: T, setter?: (...args: any[]) => any) => State<T>;
 type State<T> = T & ((T) => T) & Action<T>;
 ```
 
@@ -142,6 +156,16 @@ Two state variables that are equal to the same value, are not equal to one anoth
 ```typescript
 assert(a != b);
 ```
+
+You may define a specialized setter for a state by supplying the state function with an optional setter as a second argument.
+
+```typescript
+let b = state(1, (a, b) => a + b);
+b(1, 4);
+assert(b == 5);
+```
+
+The result of the setter function will become the value supplied to the `next` method of the underlying `Action`.
 
 ### 😃 Product
 
@@ -253,7 +277,17 @@ b("world");
 
 Unlike react, There is no restriction to where you may place your state and effects. This means that you may define an effect within the body of an effect.
 
-Be careful not to
+```
+effect(()=>{
+    let c = state("Higher Order State");
+    let d = state("More State");
+    effect(()=>{
+        console.log("Higher Order Effects")
+    }, [c,d])
+},[a,b])
+```
+
+These "Instance Effects/State", if not used responsibly, can pollute your effect chains, and cause infinite loops and runtime slowness. Be careful not to needlessly nest these structures.
 
 ### 😁 Event
 
@@ -297,25 +331,45 @@ add(1, 2); //logs 1,2 -> 3
 
 #### `Action.prototype.next<T>(value: T): this`
 
+Used to change the value of the action; triggers effects if present.
+
 #### `Action.prototype.then<T>(effect: Effect<T>): this`
+
+Adds effect to effects set for Action.
 
 #### `Action.prototype.stop<T>(effect: Effect<T>): this`
 
+Removes effect from effects set of Action.
+
 #### `Action.prototype.toJson(): string`
+
+Returns a json string of action.
 
 ### Static
 
 #### `Action.all<T>(state: State<T> | Action<T>, effect: Effect<T>): void`
 
+Binds the supplied state variables to the supplied effect. (adds effect to each state variables' effect set). Will call effect if, and only if, all of the states have changed at least once.
+
 #### `Action.any<T>(state: State<T> | Action<T>, effect: Effect<T>): void`
+
+Binds the supplied state variables to the supplied effect. Will call effect if any of the state variables change.
 
 #### `Action.once<T>(state: State<T> | Action<T>, effect: Effect<T>): void`
 
+Binds the supplied state variables to the supplied effect. Will call effect only once when any of the state variables change, then removes effect from each state variable.
+
 #### `Action.onceAll<T>(state: State<T> | Action<T>, effect: Effect<T>): void`
+
+Binds the supplied state variables to the supplied effect. Will call effect if, and only if, all of the states have changed at least once, then removes effect from each state variable.
 
 #### `Action.fromJson(json: string): State<T>`
 
+Turns json data into an Action instance.
+
 #### `Action.fromObject(obj: Record<string, any>): State<T>`
+
+Turns an Action record (object which follows json config for Action) into a state variable.
 
 ### State
 
