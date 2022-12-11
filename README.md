@@ -325,7 +325,7 @@ add(1, 2); //logs 1,2 -> 3
 
 ## API
 
-### Action
+### `Action`
 
 ### Instance
 
@@ -371,15 +371,33 @@ Turns json data into an Action instance.
 
 Turns an Action record (object which follows json config for Action) into a state variable.
 
-### State
+---
+
+### `state`
 
 ### Instance
 
 (Inherits from [`Action.prototype`](#instance))
 
-#### ``
+### Static
+
+#### `state.of( emitter: any, event: string ) : state<any>`
+
+#### `state.of( event: string ) : state<any>`
+
+Creates a state variable from an event emitter (objects which possess an `.on` or `.addEventListener` method). If only the name of the event is provided, the emitter will default to `window.document`.
+
+---
+
+### `effect`
 
 ### Static
+
+#### `effect.defer<T>(e: Effect<State<T>[]>, deps?: State<T>[], all?: boolean)`
+
+#### `effect.filter<T>(e: Effect<State<T>[]>, deps?: State<T>[])`
+
+---
 
 ## Guides
 
