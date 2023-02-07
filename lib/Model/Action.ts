@@ -157,3 +157,28 @@ export class Action<T> {
         return state(value);
     }
 }
+
+export class Terminal<T> extends Action<T> {
+    truth: T;
+    constructor(value: T = null, effects?: Effect<T>[]) {
+        super(value, effects);
+
+        this.truth = value;
+    }
+    next(value: Promise<T> | T): this {
+        let { truth } = this;
+        if (value instanceof Promise) {
+            value.then((v) => {
+                if (v !== truth) {
+                    super.next(v);
+                }
+            });
+        } else {
+            if (value !== truth) {
+                super.next(value);
+            }
+        }
+
+        return this;
+    }
+}

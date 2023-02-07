@@ -1,8 +1,12 @@
 import { Callback, Effect, State } from "./Model/model";
-import { Action } from "./Model/Action";
+import { Action, Terminal } from "./Model/Action";
 
-export function state<T>(value?: Promise<T> | T, setter?: Callback<T>) {
-    let s = new Action(value);
+export function state<T>(
+    value?: Promise<T> | T,
+    setter?: Callback<T>,
+    isTerminal: boolean = false
+) {
+    let s = isTerminal ? new Terminal(value) : new Action(value);
     let p = new Proxy(s.next, {
         get(_, prop) {
             if (
@@ -64,6 +68,11 @@ export function state<T>(value?: Promise<T> | T, setter?: Callback<T>) {
     });
 
     return p as State<T>;
+}
+
+export function terminal<T>(value?: Promise<T> | T, setter?: Callback<T>) {
+    let s = state(value, setter, true);
+    return s;
 }
 
 export function product<T>(
@@ -241,6 +250,16 @@ export function time(duration: number = Infinity) {
         duration,
         isActive,
     };
+}
+export function storage(key: string | number, defaultValue?: any) {
+    let existing = localStorage.getItem(key.toString());
+    let value = existing !== null ? JSON.parse(existing) : defaultValue;
+    let stateful = state(value);
+    effect.defer(() => {
+        localStorage.setItem(key.toString(), JSON.stringify(stateful.value));
+    }, [stateful]);
+
+    return stateful;
 }
 
 state.of = (source: any | string, event?: string) => {
