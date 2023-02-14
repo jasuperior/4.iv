@@ -130,6 +130,9 @@ export function map<T extends Record<any, any>>(
 
     let p = new Proxy(s.next, {
         get(target, prop: any) {
+            if (prop == Symbol.iterator) {
+                return Reflect.get(s.value, prop)?.bind(s.value);
+            }
             let source = Reflect.has(s, prop) ? s : s.value;
             let value = Reflect.get(source, prop);
             if (typeof value == "function") value = value.bind(source);

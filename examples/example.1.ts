@@ -62,7 +62,7 @@ m(() => console.log(m.value));
 m.a = 23; //?
 m.a; //?
 
-m.forEach(console.log); //?
+[1, m, 3].flat(); //?
 // console.log(m[0]);
 // let [isGreater, [igArgs, numberIsGreater]] = event.toggle(
 //     (a: number, b: number) => a + b > 10
