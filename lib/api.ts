@@ -130,8 +130,9 @@ export function map<T extends Record<any, any>>(
 
     let p = new Proxy(s.next, {
         get(target, prop: any) {
-            let value = Reflect.get(s, prop) || Reflect.get(s.value, prop);
-            if (typeof value == "function") value = value.bind(p);
+            let source = Reflect.has(s, prop) ? s : s.value;
+            let value = Reflect.get(source, prop);
+            if (typeof value == "function") value = value.bind(source);
             return value;
         },
         set(target, prop, value) {
@@ -151,6 +152,16 @@ export function map<T extends Record<any, any>>(
             }
 
             return value as T;
+        },
+        has(target, prop) {
+            return (
+                Reflect.has(s, prop) ||
+                Reflect.has(s.value, prop) ||
+                Reflect.has(s.props, prop)
+            );
+        },
+        getPrototypeOf() {
+            return Object.getPrototypeOf(value);
         },
     });
 

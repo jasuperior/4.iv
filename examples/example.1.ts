@@ -57,12 +57,13 @@ let arr = (...values: any[]) => {
     return [current, set];
 };
 
-let m = map<Record<any, any>>({ a: 1 });
+let m = map([{ a: 1 }, 9]);
 m(() => console.log(m.value));
 m.a = 23; //?
 m.a; //?
-m({ b: 23 });
-console.log(m.a);
+
+m.forEach(console.log); //?
+// console.log(m[0]);
 // let [isGreater, [igArgs, numberIsGreater]] = event.toggle(
 //     (a: number, b: number) => a + b > 10
 // );
