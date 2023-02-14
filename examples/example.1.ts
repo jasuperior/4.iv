@@ -1,4 +1,13 @@
-import { state, event, effect, defer, product, time } from "../lib/api";
+import {
+    state,
+    event,
+    effect,
+    defer,
+    product,
+    time,
+    group,
+    map,
+} from "../lib/api";
 import { State } from "../lib/Model/model";
 import { Action } from "../lib/Model/Action";
 
@@ -48,6 +57,12 @@ let arr = (...values: any[]) => {
     return [current, set];
 };
 
+let m = map<Record<any, any>>({ a: 1 });
+m(() => console.log(m.value));
+m.a = 23; //?
+m.a; //?
+m({ b: 23 });
+console.log(m.a);
 // let [isGreater, [igArgs, numberIsGreater]] = event.toggle(
 //     (a: number, b: number) => a + b > 10
 // );
@@ -73,16 +88,36 @@ let arr = (...values: any[]) => {
 // a[0]; //?
 // a.toJson(); //?
 
-let t = time(8000);
-let seconds = state(0);
-let centiSeconds = state(0);
-console.log(centiSeconds.value);
-// t.progress(console.log);
-t.progress((v: number) => seconds(Math.floor(v / 1000)));
-t.progress((v) => centiSeconds(Math.floor((v || 1) / 100)));
-seconds(console.log);
-seconds(() => seconds > 6 && t.stop());
-t.progress(5990);
-// // t.reverse();
-t.start();
+// let t = time(8000);
+// let seconds = state(0);
+// let centiSeconds = state(0);
+// console.log(centiSeconds.value);
+// // t.progress(console.log);
+// t.progress((v: number) => seconds(Math.floor(v / 1000)));
+// t.progress((v) => centiSeconds(Math.floor((v || 1) / 100)));
+// seconds(console.log);
+// seconds(() => seconds > 6 && t.stop());
+// t.progress(5990);
+// // // t.reverse();
+// t.start();
 // setTimeout(()=> t.isActive(false), 1000)
+
+let array = [20, 4, "hsting", [1, 2, 3]];
+let t = group(array);
+// t[0](() => console.log("something", t[0].value));
+// t[1](() => console.log("something else", t[0].value));
+// t[0] = 3;
+// t[0](() => console.log("something", t[0].value));
+// t[10] = 5;
+// let g = t[3][1];
+// t(() => {
+//     console.log("new t");
+// });
+// g(() => {
+//     console.log("new t");
+// });
+// t[3].value; //?
+// t[3].value; //?
+// t.forEach((element) => {
+//     console.log(element);
+// });

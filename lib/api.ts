@@ -1,5 +1,5 @@
 import { Callback, Effect, State } from "./Model/model";
-import { Action, Terminal } from "./Model/Action";
+import { Action, MappedAction, Terminal } from "./Model/Action";
 
 export function state<T>(
     value?: Promise<T> | T,
@@ -42,6 +42,7 @@ export function state<T>(
             }
         },
         set(target, prop, value) {
+            // if (value?.[Action.Type] !== Action.Type) value = state(value);
             return Reflect.set(s.props, prop, value);
         },
         has(target, prop) {
@@ -70,6 +71,92 @@ export function state<T>(
     return p as State<T>;
 }
 
+export function group<T>(value?: Promise<T[]> | T[], setter?: Callback<T[]>) {
+    let g = state(value, setter);
+    let p = new Proxy(
+        (arg: (T | State<T>)[]) => {
+            return undefined as T;
+        },
+        {
+            get(target, prop: any) {
+                prop =
+                    typeof prop == "symbol"
+                        ? prop
+                        : !Number.isNaN(+new Number(prop))
+                        ? new Number(prop)
+                        : prop;
+                if (prop instanceof Number) {
+                    let value = Reflect.get(g.value, prop as number);
+                    if (value?.[Action.Type] !== Action.Type) {
+                        value = Array.isArray(value)
+                            ? group(value)
+                            : state(value);
+                        g.value[prop as number] = value;
+                    }
+                    return value;
+                } else {
+                    return Reflect.get(g, prop);
+                }
+            },
+            set(target, props, value) {
+                let newValue = g.value[props];
+                if (newValue?.[Action.Type] !== Action.Type) {
+                    newValue = Array.isArray(value)
+                        ? group(value)
+                        : state(value);
+                    return Reflect.set(g.value, props, newValue);
+                } else {
+                    newValue(value);
+                    return true;
+                }
+            },
+            apply(_, thisArg, args: T | Promise<T>[]) {
+                // console.log(g.value, args);
+                //@ts-ignore
+                return g(...args);
+            },
+        }
+    );
+
+    //@ts-ignore
+    return p as State<any[]>; //gotta figure this typing out
+    // & ((...args: (T | State<T>)[]) => T[]);
+}
+export function map<T extends Record<any, any>>(
+    value: T,
+    setter?: Callback<T>
+) {
+    let s = new MappedAction(value);
+
+    let p = new Proxy(s.next, {
+        get(target, prop: any) {
+            let value = Reflect.get(s, prop) || Reflect.get(s.value, prop);
+            if (typeof value == "function") value = value.bind(p);
+            return value;
+        },
+        set(target, prop, value) {
+            return Reflect.set(s.value, prop, value);
+        },
+        apply(_, thisArg, args): T {
+            let value = setter ? setter(...args) : args[0];
+            let t = typeof value;
+
+            switch (t) {
+                case "function":
+                    s.then(value);
+                    break;
+                default:
+                    s.next(value);
+                    break;
+            }
+
+            return value as T;
+        },
+    });
+
+    //@ts-ignore
+    return p as State<T>;
+}
 export function terminal<T>(value?: Promise<T> | T, setter?: Callback<T>) {
     let s = state(value, setter, true);
     return s;

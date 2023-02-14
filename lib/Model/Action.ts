@@ -7,6 +7,9 @@ export class Action<T> {
     props: Record<string, any> = {};
     readonly effects: Set<Effect<T>> = new Set(); //set of effects
     errorHandler: Callback;
+    get [Symbol.for("Action")]() {
+        return Action.Type;
+    }
     constructor(value: Promise<T> | T = null, effects?: Effect<T>[]) {
         if (effects) this.effects = new Set(effects);
         this.next(value);
@@ -156,17 +159,21 @@ export class Action<T> {
     static state(value): State<any> {
         return state(value);
     }
+    static Type = Symbol.for("Action");
 }
 
 export class Terminal<T> extends Action<T> {
-    truth: T;
+    identity: T;
+    get true() {
+        return this.identity;
+    }
     constructor(value: T = null, effects?: Effect<T>[]) {
         super(value, effects);
 
-        this.truth = value;
+        this.identity = value;
     }
     next(value: Promise<T> | T): this {
-        let { truth } = this;
+        let { identity: truth } = this;
         if (value instanceof Promise) {
             value.then((v) => {
                 if (v !== truth) {
@@ -179,6 +186,28 @@ export class Terminal<T> extends Action<T> {
             }
         }
 
+        return this;
+    }
+}
+
+export class MappedAction<T> extends Action<T> {
+    constructor(value: Promise<T> | T = null, effects?: Effect<T>[]) {
+        super(null as T, effects);
+        this.value = value as T;
+    }
+    next(value: Promise<T> | T): this {
+        let lastValue = this.value;
+        if (value instanceof Promise) {
+            value
+                .then(this.next.bind(this))
+                .catch(this.errorHandler.bind(this));
+        } else if (typeof value == "object" && value !== lastValue) {
+            this.value = value as T;
+            this.lastValue = lastValue;
+            this.tick();
+        } else {
+            super.next(value);
+        }
         return this;
     }
 }
