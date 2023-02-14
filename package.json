@@ -1,6 +1,6 @@
 {
     "name": "@oneii3/4iv",
-    "version": "0.0.10",
+    "version": "0.0.11",
     "description": "A novel, composable, unopinionated FRP library.",
     "main": "public/index.js",
     "module": "public/index.es.js",
